@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "exactOptionalPropertyTypes": false,
+    "lib": [
+      "WebWorker",
+      "ESNext"
+    ]
+  },
+  "include": [
+    "*.ts",
+    "*.d.ts"
+  ]
+}
