@@ -31,39 +31,63 @@ const apiCacheConfig = [
   { type: 'announcements', urlPattern: '/api/announcements' },
   { type: 'doctor-schedules', urlPattern: '/api/reg/doctor-schedules/doctors' },
   { type: 'registration', urlPattern: '/api/rest/anonymous/web/registration' },
+  { type: 'employees', urlPattern: '/api/employees' },
 ]
 
 const apiPostCacheConfig = [{ urlPattern: '/api/rest/anonymous/web/registration' }]
-// 使用 IndexedDB 來存取 API 資料
+
 apiCacheConfig.forEach(({ type, urlPattern }) => {
   registerRoute(
     ({ url }) => url.origin === 'https://apidev.hiscloud.tw' && url.pathname.startsWith(urlPattern),
-    async ({ request }) => {
-      // 只儲存資料到 IndexedDB
+    async ({ request, url }) => {
+      const id = new URLSearchParams(url.search).get('id')
+
       try {
+        // **1. 在線模式：請求 API**
         const networkResponse = await fetch(request)
 
         if (networkResponse.ok) {
           const clonedResponse = networkResponse.clone()
+          const jsonData = await clonedResponse.json()
 
-          // 儲存到 IndexedDB
-          await saveToDB(type, request.url, await clonedResponse.json())
+          // **2. 存入 IndexedDB**
+          if (id) {
+            // 單筆資料存 id
+            await saveToDB(type, id, jsonData)
+          } else {
+            // 整個列表存 URL
+            await saveToDB(type, request.url, jsonData)
+          }
+
           return networkResponse
         }
       } catch (error) {
-        console.log(`Network request failed for ${type}, fetching from IndexedDB:`, error)
+        console.error(`Network request failed for ${type}, fetching from IndexedDB:`, error)
       }
 
-      // 如果網路請求失敗，從 IndexedDB 讀取資料
-      const cachedData = await getFromDB(type, request.url)
-
-      if (cachedData) {
-        return new Response(JSON.stringify(cachedData.data), {
-          headers: { 'Content-Type': 'application/json' },
-        })
+      // **3. 離線模式：從 IndexedDB 取資料**
+      if (id) {
+        // 查找單筆資料
+        const cachedData = await getFromDB(type, id)
+        if (cachedData) {
+          return new Response(JSON.stringify(cachedData.data), {
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
+      } else {
+        // 查找完整列表
+        const cachedData = await getFromDB(type, request.url)
+        if (cachedData) {
+          return new Response(JSON.stringify(cachedData.data), {
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
       }
 
-      return new Response(null, { status: 500, statusText: 'Network Error' })
+      return new Response(JSON.stringify({ error: 'Data not found' }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 404,
+      })
     },
   )
 })

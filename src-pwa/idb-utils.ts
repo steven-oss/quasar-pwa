@@ -30,27 +30,3 @@ export async function getFromDB(type: string, url: string) {
   const allData = await db.getAll(STORE_NAME)
   return allData.find((item) => item.type === type && item.url === url)
 }
-
-// 儲存離線請求
-export async function savePendingRequestToDB(url: string, method: string, body: unknown) {
-  try {
-    const db = await getDB()
-    const bodyText = JSON.stringify(body) // 確保可以存為字串
-    await db.add(PENDING_STORE, { url, method, body: bodyText, timestamp: Date.now() })
-    console.log('Request saved to IndexedDB:', { url, method, body })
-  } catch (error) {
-    console.error('Error saving to IndexedDB:', error)
-  }
-}
-
-// 讀取所有待處理請求
-export async function getPendingRequests() {
-  const db = await getDB()
-  return db.getAll(PENDING_STORE)
-}
-
-// 清除某個已處理的請求
-export async function removePendingRequest(id: number) {
-  const db = await getDB()
-  await db.delete(PENDING_STORE, id)
-}

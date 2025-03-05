@@ -16,3 +16,13 @@ export interface Doctor {
   title: string
   chName: string
 }
+
+export interface Employees {
+  id: string
+  idNo: string
+}
+
+export interface Employee {
+  id: string
+  title: string
+}

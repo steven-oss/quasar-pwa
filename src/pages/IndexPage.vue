@@ -1,13 +1,5 @@
 <template>
   <q-page class="row items-center justify-evenly">
-    <example-component
-      title="Example component"
-      active
-      :todos="todos"
-      :meta="meta"
-    ></example-component>
-  </q-page>
-  <q-page class="row items-center justify-evenly">
     <example-component1
       title="Example component1"
       active
@@ -15,6 +7,17 @@
       :meta="meta"
     ></example-component1>
   </q-page>
+  <div class="q-pa-md">
+    <q-table title="Treats" :rows="datas1" :columns="columns" row-key="id">
+      <!-- 自訂 body-cell-actions 插槽 -->
+      <template v-slot:body-cell-actions="props">
+        <q-td :props="props">
+          <!-- 按鈕 -->
+          <q-btn dense flat color="primary" icon="edit" @click="handleClickById(props.row)" />
+        </q-td>
+      </template>
+    </q-table>
+  </div>
   <div class="q-pa-md q-gutter-sm">
     <div class="q-gutter-md" style="max-width: 300px">
       <q-input v-model="text" label="Standard" />
@@ -25,60 +28,54 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import type { Todo, Meta, People } from 'components/models'
-import ExampleComponent from 'components/ExampleComponent.vue'
+import type { Meta, People, Employee, Employees } from 'components/models'
 import ExampleComponent1 from 'components/ExampleComponent1.vue'
 import { api } from 'src/boot/axios'
-
-const todos = ref<Todo[]>([
-  {
-    id: 1,
-    content: 'ct1',
-  },
-  {
-    id: 2,
-    content: 'ct2',
-  },
-  {
-    id: 3,
-    content: 'ct3',
-  },
-  {
-    id: 4,
-    content: 'ct4',
-  },
-  {
-    id: 5,
-    content: 'ct5',
-  },
-])
 
 const meta = ref<Meta>({
   totalCount: 1200,
 })
 
 const datas = ref<People[]>([])
+const datas1 = ref<Employees[]>([])
 const text = ref<string>('')
+const columns = ref([
+  { name: 'id', label: 'ID', field: 'id', align: 'left' as const, sortable: true },
+  { name: 'idNo', label: 'ID No', field: 'idNo', align: 'left' as const, sortable: true },
+  { name: 'actions', label: 'Actions', field: 'actions' as const }, // 添加 actions 欄位
+])
+const employee = ref<Employee>({
+  id: '',
+  title: '',
+})
 
 const fetchData = async () => {
   try {
-    const response = await api.get('/announcements/?isActive=true')
+    const response = await api.get('announcements/?isActive=true')
+    const response1 = await api.get('employees/?page=0&size=30')
     // const res = await axios.get('https://apidev.hiscloud.tw/api/reg/doctor-schedules/doctors')
 
-    const response2 = await api.get(
-      'https://apidev.hiscloud.tw/api/rest/anonymous/web/registration/10000000-0000-0000-0000-000000000002/reg/shift-data/?page=0&size=30',
-    )
-    console.log(response.data)
-    console.log(response2.data)
     datas.value = await response.data.map(({ id, content }: People) => ({
       id,
       content,
+    }))
+
+    datas1.value = await response1.data.content.map(({ id, idNo }: Employees) => ({
+      id,
+      idNo,
     }))
   } catch (error) {
     console.error('Error fetching data:', error)
   }
 }
-
+const handleClickById = async (row: Employees) => {
+  try {
+    const getById = await api.get(`employees/${row.id}`)
+    employee.value = { id: getById.data.id, title: getById.data.title }
+  } catch (err) {
+    console.error(err)
+  }
+}
 const handleClick = async () => {
   try {
     const postRes = await api.post(
