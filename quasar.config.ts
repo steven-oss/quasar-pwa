@@ -11,7 +11,7 @@ export default defineConfig((/* ctx */) => {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
-    boot: [],
+    boot: ['axios'],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
     css: ['app.scss'],
@@ -107,12 +107,12 @@ export default defineConfig((/* ctx */) => {
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#sourcefiles
     sourceFiles: {
-      //   rootComponent: 'src/App.vue',
-      //   router: 'src/router/index',
-      //   store: 'src/store/index',
-      //   pwaRegisterServiceWorker: 'src-pwa/register-service-worker',
+      // rootComponent: 'src/App.vue',
+      // router: 'src/router/index',
+      // store: 'src/store/index',
+      pwaRegisterServiceWorker: 'src-pwa/register-service-worker',
       pwaServiceWorker: 'src-pwa/custom-service-worker',
-      //   pwaManifestFile: 'src-pwa/manifest.json',
+      pwaManifestFile: 'src-pwa/manifest.json',
       //   electronMain: 'src-electron/electron-main',
       //   electronPreload: 'src-electron/electron-preload'
       //   bexManifestFile: 'src-bex/manifest.json
@@ -145,16 +145,14 @@ export default defineConfig((/* ctx */) => {
     // https://v2.quasar.dev/quasar-cli-vite/developing-pwa/configuring-pwa
     pwa: {
       workboxMode: 'InjectManifest', // 'GenerateSW' or 'InjectManifest'
-      swFilename: 'custom-service-worker.js',
-      manifestFilename: 'manifest.json',
-      // extendManifestJson (json) {},
+      // swFilename: 'sw.js',
+      // manifestFilename: 'manifest.json',
+      // //  extendManifestJson(json) {},
       // useCredentialsForManifestTag: true,
       // injectPwaMetaTags: false,
-      // extendPWACustomSWConf (esbuildConf) {},
+      //  extendPWACustomSWConf(esbuildConf) {},
       // extendGenerateSWOptions (cfg) {},
-      extendInjectManifestOptions(cfg) {
-        cfg.swSrc = 'src-pwa/custom-service-worker.js'
-      },
+      // extendInjectManifestOptions (cfg) {}
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-cordova-apps/configuring-cordova
@@ -196,7 +194,7 @@ export default defineConfig((/* ctx */) => {
       builder: {
         // https://www.electron.build/configuration/configuration
 
-        appId: 'pwa-project',
+        appId: 'quasar-project',
       },
     },
 
