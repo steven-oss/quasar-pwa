@@ -28,7 +28,7 @@ import { ref, onMounted } from 'vue'
 import type { Todo, Meta, People } from 'components/models'
 import ExampleComponent from 'components/ExampleComponent.vue'
 import ExampleComponent1 from 'components/ExampleComponent1.vue'
-import axios from 'axios'
+import { api } from 'src/boot/axios'
 
 const todos = ref<Todo[]>([
   {
@@ -62,15 +62,13 @@ const text = ref<string>('')
 
 const fetchData = async () => {
   try {
-    const response = await axios.get('https://apidev.hiscloud.tw/api/announcements/?isActive=true')
-    const response1 = await axios.get(
-      'https://apidev.hiscloud.tw/api/rest/anonymous/web/registration/10000000-0000-0000-0000-000000000001/reg/shift-data/?page=0&size=30',
-    )
+    const response = await api.get('/announcements/?isActive=true')
+    // const res = await axios.get('https://apidev.hiscloud.tw/api/reg/doctor-schedules/doctors')
 
-    const response2 = await axios.get(
+    const response2 = await api.get(
       'https://apidev.hiscloud.tw/api/rest/anonymous/web/registration/10000000-0000-0000-0000-000000000002/reg/shift-data/?page=0&size=30',
     )
-    console.log(response1.data)
+    console.log(response.data)
     console.log(response2.data)
     datas.value = await response.data.map(({ id, content }: People) => ({
       id,
@@ -83,8 +81,8 @@ const fetchData = async () => {
 
 const handleClick = async () => {
   try {
-    const postRes = await axios.post(
-      'https://apidev.hiscloud.tw/api/rest/anonymous/web/registration/10000000-0000-0000-0000-000000000001/reg/patient/',
+    const postRes = await api.post(
+      '/rest/anonymous/web/registration/10000000-0000-0000-0000-000000000001/reg/patient/',
       {
         activeCode: null,
         address: null,
