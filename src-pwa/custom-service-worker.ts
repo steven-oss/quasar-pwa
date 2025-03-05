@@ -14,9 +14,9 @@ import {
   precacheAndRoute,
 } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
-import { ExpirationPlugin } from 'workbox-expiration'
-import { NetworkOnly, StaleWhileRevalidate } from 'workbox-strategies'
-import { Queue } from 'workbox-background-sync'
+import { getFromDB, saveToDB } from './idb-utils'
+import { BackgroundSyncPlugin } from 'workbox-background-sync'
+import { NetworkOnly } from 'workbox-strategies'
 
 void self.skipWaiting()
 
@@ -28,65 +28,59 @@ precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 
 const apiCacheConfig = [
-  { urlPatten: '/api/announcements', cacheName: 'api-announcements' },
-  { urlPatten: '/api/reg/doctor-schedules/doctors', cacheName: 'api-reg-doctor-schedules-doctors' },
+  { type: 'announcements', urlPattern: '/api/announcements' },
+  { type: 'doctor-schedules', urlPattern: '/api/reg/doctor-schedules/doctors' },
+  { type: 'registration', urlPattern: '/api/rest/anonymous/web/registration' },
 ]
-// API 快取策略
-apiCacheConfig.forEach(({ urlPatten, cacheName }) => {
+
+const apiPostCacheConfig = [{ urlPattern: '/api/rest/anonymous/web/registration' }]
+// 使用 IndexedDB 來存取 API 資料
+apiCacheConfig.forEach(({ type, urlPattern }) => {
   registerRoute(
-    ({ url }) => url.origin === 'https://apidev.hiscloud.tw' && url.pathname.startsWith(urlPatten),
-    new StaleWhileRevalidate({
-      cacheName,
-      plugins: [
-        new ExpirationPlugin({
-          maxEntries: 50, // 最多快取 50 個 API 回應
-          maxAgeSeconds: 60 * 60 * 24, // 24 小時後過期
-        }) as unknown as WorkboxPlugin,
-      ],
-    }),
+    ({ url }) => url.origin === 'https://apidev.hiscloud.tw' && url.pathname.startsWith(urlPattern),
+    async ({ request }) => {
+      // 只儲存資料到 IndexedDB
+      try {
+        const networkResponse = await fetch(request)
+
+        if (networkResponse.ok) {
+          const clonedResponse = networkResponse.clone()
+
+          // 儲存到 IndexedDB
+          await saveToDB(type, request.url, await clonedResponse.json())
+          return networkResponse
+        }
+      } catch (error) {
+        console.log(`Network request failed for ${type}, fetching from IndexedDB:`, error)
+      }
+
+      // 如果網路請求失敗，從 IndexedDB 讀取資料
+      const cachedData = await getFromDB(type, request.url)
+
+      if (cachedData) {
+        return new Response(JSON.stringify(cachedData.data), {
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      return new Response(null, { status: 500, statusText: 'Network Error' })
+    },
   )
 })
 
-// 建立 Background Sync 隊列
-const postQueue = new Queue('patient-registration-queue', {
-  maxRetentionTime: 24 * 60, // 24 小時內同步請求
+const bgSyncPlugin: WorkboxPlugin = new BackgroundSyncPlugin('post-queue', {
+  maxRetentionTime: 24 * 60, // 最多保留 24 小時
+}) as WorkboxPlugin
+
+apiPostCacheConfig.forEach(({ urlPattern }) => {
+  registerRoute(
+    ({ url }) => url.origin === 'https://apidev.hiscloud.tw' && url.pathname.startsWith(urlPattern),
+    new NetworkOnly({
+      plugins: [bgSyncPlugin], // 使用 Background Sync 插件來處理離線請求
+    }),
+    'POST',
+  )
 })
-
-// POST API 快取策略（適用於所有 /api/ 開頭的 POST 請求）
-registerRoute(
-  ({ url, request }) =>
-    url.origin === 'https://apidev.hiscloud.tw' &&
-    request.method === 'POST' &&
-    url.pathname.startsWith(
-      '/api/rest/anonymous/web/registration/10000000-0000-0000-0000-000000000001/reg/patient/',
-    ),
-  new NetworkOnly({
-    plugins: [
-      {
-        fetchDidFail: async ({ request }) => {
-          console.log(`❌ POST Request failed, adding to queue: ${request.url}`)
-
-          try {
-            // 重新複製 Request，確保 body 可讀取
-            const clonedRequest = new Request(request.url, {
-              method: request.method,
-              headers: request.headers,
-              body: request.clone().body, // 重新複製 body
-              mode: request.mode,
-              credentials: request.credentials,
-            })
-
-            // 加入 Background Sync Queue
-            await postQueue.pushRequest({ request: clonedRequest })
-            console.log(`✅ Successfully added to queue: ${request.url}`)
-          } catch (error) {
-            console.error('Error adding request to queue:', error)
-          }
-        },
-      },
-    ],
-  }),
-)
 
 // Non-SSR fallbacks to index.html
 // Production SSR fallbacks to offline.html (except for dev)

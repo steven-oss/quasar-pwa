@@ -16,6 +16,9 @@
     ></example-component1>
   </q-page>
   <div class="q-pa-md q-gutter-sm">
+    <div class="q-gutter-md" style="max-width: 300px">
+      <q-input v-model="text" label="Standard" />
+    </div>
     <q-btn push color="white" text-color="primary" label="Push" @click="handleClick" />
   </div>
 </template>
@@ -55,22 +58,24 @@ const meta = ref<Meta>({
 })
 
 const datas = ref<People[]>([])
-// const datas1 = ref<Doctor[]>([])
+const text = ref<string>('')
 
 const fetchData = async () => {
   try {
     const response = await axios.get('https://apidev.hiscloud.tw/api/announcements/?isActive=true')
-    // const res = await axios.get('https://apidev.hiscloud.tw/api/reg/doctor-schedules/doctors')
+    const response1 = await axios.get(
+      'https://apidev.hiscloud.tw/api/rest/anonymous/web/registration/10000000-0000-0000-0000-000000000001/reg/shift-data/?page=0&size=30',
+    )
 
+    const response2 = await axios.get(
+      'https://apidev.hiscloud.tw/api/rest/anonymous/web/registration/10000000-0000-0000-0000-000000000002/reg/shift-data/?page=0&size=30',
+    )
+    console.log(response1.data)
+    console.log(response2.data)
     datas.value = await response.data.map(({ id, content }: People) => ({
       id,
       content,
     }))
-
-    // datas1.value = await res.data.map(({ title, chName }: Doctor) => ({
-    //   title,
-    //   chName,
-    // }))
   } catch (error) {
     console.error('Error fetching data:', error)
   }
@@ -108,7 +113,7 @@ const handleClick = async () => {
         firstVisitDate: null,
         foreign: false,
         genderCode: '1',
-        idNumber: 'A122394093',
+        idNumber: text.value,
         languageCode: null,
         lastAppointmentDate: null,
         marriedType: null,
@@ -134,5 +139,15 @@ const handleClick = async () => {
     console.error(err)
   }
 }
+// onMounted(() => {
+//   // 獲取 Vue 實例並從全局屬性中獲取 $announcements
+//   const instance = getCurrentInstance()
+//   if (instance) {
+//     const globalAnnouncements = instance.appContext.config.globalProperties.$announcements
+//     if (globalAnnouncements) {
+//       datas.value = globalAnnouncements
+//     }
+//   }
+// })
 onMounted(fetchData)
 </script>
