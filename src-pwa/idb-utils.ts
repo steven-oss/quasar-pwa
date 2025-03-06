@@ -19,13 +19,13 @@ export async function getDB() {
 }
 
 // 儲存 API 回應
-export async function saveToDB(type: string, url: string, data: unknown) {
+export async function saveToDB(type: string, url: string | undefined, data: unknown) {
   const db = await getDB()
   await db.put(STORE_NAME, { type, url, data, timestamp: Date.now() })
 }
 
 // 從 DB 讀取快取
-export async function getFromDB(type: string, url: string) {
+export async function getFromDB(type: string, url: string | undefined) {
   const db = await getDB()
   const allData = await db.getAll(STORE_NAME)
   return allData.find((item) => item.type === type && item.url === url)

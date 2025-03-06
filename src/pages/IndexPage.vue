@@ -24,6 +24,7 @@
     </div>
     <q-btn push color="white" text-color="primary" label="Push" @click="handleClick" />
   </div>
+  {{ employee.title }}
 </template>
 
 <script setup lang="ts">
